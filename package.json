@@ -7,7 +7,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "pipeline": "node pipeline/cli.js",
-    "pipeline:no-agents": "SKIP_AGENTS=1 node pipeline/cli.js"
+    "pipeline:no-agents": "SKIP_AGENTS=1 node pipeline/cli.js",
+    "portrait": "node pipeline/cli-portrait.js",
+    "portrait:test": "node --test pipeline/agents/portrait/*.test.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",

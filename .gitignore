@@ -39,6 +39,7 @@ contacts/
 # Pipeline I/O — regeneratable from local data, contains real names
 inputs/
 pipeline/output/
+pipeline/output/portraits/notes/
 pipeline/SAMPLE_OUTPUT.md
 
 # Personal documents written during this work

@@ -12,7 +12,8 @@
     "portrait:test": "node --test pipeline/agents/portrait/*.test.js",
     "build-db": "node pipeline/build-db.js",
     "build-connections": "node pipeline/build-connections.js",
-    "context": "node pipeline/cli-context.js"
+    "context": "node pipeline/cli-context.js",
+    "build-photos": "node pipeline/build-photos.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",

@@ -41,6 +41,7 @@ inputs/
 pipeline/output/
 pipeline/output/portraits/notes/
 pipeline/output/raw/messages.duckdb
+pipeline/output/events/
 pipeline/SAMPLE_OUTPUT.md
 
 # Personal documents written during this work

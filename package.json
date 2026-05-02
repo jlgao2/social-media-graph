@@ -15,6 +15,7 @@
     "context": "node pipeline/cli-context.js",
     "build-photos": "node pipeline/build-photos.js",
     "merge-identities": "node pipeline/cli-merge-identities.js",
+    "scan-birthdays": "node pipeline/scan-birthdays.js",
     "serve": "node pipeline/serve.js"
   },
   "dependencies": {

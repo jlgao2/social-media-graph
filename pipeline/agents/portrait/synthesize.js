@@ -4,9 +4,13 @@ Texture first, structure later. Be the friend who reminds them of what's true. D
 
 You may ONLY use quotes from the anchor allowlist provided. Do not paraphrase. Do not compose new quotes. If a quote isn't in the allowlist, do not use it.
 
+CRITICAL: Quoted phrases anywhere in the portrait — including inside prose paragraphs — must come verbatim from the allowlist or from messages visible in the chunk notes. Do NOT use double-quote characters (" or ") around any phrase that you have invented or paraphrased. The verifier checks both blockquote-formatted lines AND any text appearing in double quotes anywhere in the document. A fabricated quote in prose will fail the same as a fabricated blockquote.
+
 Quotes appear in the portrait formatted as:
 > Them: <exact body from allowlist>
 > You: <exact body from allowlist>
+
+If you want to gesture at a phrase without quoting verbatim, use italics (single asterisks) or no markup at all — but never double quotes around invented language.
 
 Output strictly the markdown portrait, no preamble or commentary.`;
 
@@ -31,12 +35,13 @@ function formatAnchor(a) {
  * @returns {Promise<string>} the portrait markdown
  */
 export async function synthesizePortrait(client, args) {
-  const { name, sources, messageCount, dateRange, chunkNotes, allowlist, userNotes } = args;
+  const { name, sources, messageCount, dateRange, chunkNotes, allowlist, userNotes = '', retryFeedback = '' } = args;
 
   const anchorBlock = allowlist.anchors.map(formatAnchor).join('\n\n');
   const notesBlock = chunkNotes.map((n, i) => `--- Chunk ${i + 1} ---\n${n}`).join('\n\n');
-  const userNotesBlock = (userNotes || '').trim()
-    ? `\n# User feedback to incorporate this round\n${userNotes.trim()}\n`
+  const allFeedback = [userNotes.trim(), retryFeedback.trim()].filter(Boolean).join('\n\n');
+  const userNotesBlock = allFeedback
+    ? `\n# User feedback to incorporate this round\n${allFeedback}\n`
     : '';
 
   const today = new Date().toISOString().slice(0, 10);

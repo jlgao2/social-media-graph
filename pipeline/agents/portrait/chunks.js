@@ -49,10 +49,12 @@ export function chunkByTimeWindow(messages, opts = {}) {
     }
   }
 
-  // 3) Merge sparse chunks (where the *previous* chunk has fewer than minPerChunk)
+  // 3) Merge sparse chunks: if the *current* chunk is below threshold and a
+  //    previous chunk exists, fold it into the previous one. This handles
+  //    both chronic sparseness and a sparse tail after dense periods.
   const merged = [];
   for (const b of split) {
-    if (merged.length > 0 && merged[merged.length - 1].messages.length < minPerChunk) {
+    if (merged.length > 0 && b.messages.length < minPerChunk) {
       const prev = merged[merged.length - 1];
       prev.messages.push(...b.messages);
       prev.endTs = b.endTs;

@@ -43,7 +43,7 @@ export async function buildPortrait(client, args) {
   let markdown = '';
   let verified = false;
   let attempts = 0;
-  let feedback = userNotes;
+  let retryFeedback = '';
 
   while (!verified && attempts < MAX_VERIFY_ATTEMPTS) {
     attempts++;
@@ -55,7 +55,8 @@ export async function buildPortrait(client, args) {
       dateRange,
       chunkNotes,
       allowlist,
-      userNotes: feedback,
+      userNotes,        // clean, untouched across retries — used in frontmatter
+      retryFeedback,    // grows on retry — used only in prompt body
     });
     const result = verifyPortraitQuotes(markdown, allMessages);
     if (result.ok) {
@@ -63,8 +64,10 @@ export async function buildPortrait(client, args) {
       process.stdout.write('verified ✓\n');
     } else {
       process.stdout.write(`${result.failures.length} unverified quotes\n`);
-      const failedList = result.failures.map(f => `  - ${f.speaker}: "${f.body}"`).join('\n');
-      feedback = `${userNotes}\n\nPRIOR ATTEMPT used quotes that do not exist in the source messages. DO NOT use these — they were fabricated:\n${failedList}\n\nUse only quotes from the allowlist, verbatim.`;
+      const failedList = result.failures
+        .map(f => `  - ${f.kind === 'prose' ? 'prose-embedded quote' : f.speaker}: "${f.body}"`)
+        .join('\n');
+      retryFeedback = `PRIOR ATTEMPT used quotes that do not exist in the source messages. DO NOT use these — they were fabricated:\n${failedList}\n\nUse only quotes from the allowlist, verbatim. Do not embed double-quoted phrases in prose.`;
     }
   }
 

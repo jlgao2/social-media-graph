@@ -44,3 +44,24 @@ test('handles empty input', () => {
   const chunks = chunkByTimeWindow([], { windowDays: 90, maxPerChunk: 600, minPerChunk: 5 });
   assert.deepEqual(chunks, []);
 });
+
+test('merges a sparse tail after a dense window', () => {
+  const messages = [];
+  // 800 messages in one quarter (will split into two ~400-msg sub-chunks)
+  for (let i = 0; i < 800; i++) {
+    messages.push({ id: `m${i}`, ts: ms(`2024-06-15T12:00:00Z`) + i * 1000, body: `dense ${i}` });
+  }
+  // Then a tiny tail in the next quarter
+  for (let i = 0; i < 3; i++) {
+    messages.push({ id: `tail${i}`, ts: ms(`2024-10-15T12:00:00Z`) + i * 1000, body: `tail ${i}` });
+  }
+  const chunks = chunkByTimeWindow(messages, { windowDays: 90, maxPerChunk: 600, minPerChunk: 5 });
+  // The 3-message tail should be absorbed into the prior chunk, not orphaned
+  for (const c of chunks) {
+    assert.ok(c.messages.length >= 5 || chunks.indexOf(c) === 0,
+      `chunk ${chunks.indexOf(c)} has ${c.messages.length} messages — expected merge`);
+  }
+  // Total preserved
+  const total = chunks.reduce((s, c) => s + c.messages.length, 0);
+  assert.equal(total, 803);
+});

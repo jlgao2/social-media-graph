@@ -9,7 +9,8 @@
     "pipeline": "node pipeline/cli.js",
     "pipeline:no-agents": "SKIP_AGENTS=1 node pipeline/cli.js",
     "portrait": "node pipeline/cli-portrait.js",
-    "portrait:test": "node --test pipeline/agents/portrait/*.test.js"
+    "portrait:test": "node --test pipeline/agents/portrait/*.test.js",
+    "build-db": "node pipeline/build-db.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
@@ -19,6 +20,7 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@duckdb/node-api": "^1.5.2-r.1",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.16",
     "postcss": "^8.4.32",

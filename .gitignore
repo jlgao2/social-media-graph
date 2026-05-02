@@ -57,3 +57,4 @@ WHAT_EJ_HELPED_ME_SEE.md
 !.env.example
 *.pem
 *.key
+pipeline/identity-aliases.json

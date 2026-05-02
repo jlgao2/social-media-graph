@@ -24,6 +24,7 @@ import { parseImessageExport } from './ingest/imessage.js';
 import { parseWhatsappExport } from './ingest/whatsapp.js';
 import { parseMessengerExport } from './ingest/messenger.js';
 import { parseVcf } from './ingest/contacts.js';
+import { loadIcsBirthdays } from './ingest/birthdays-ics.js';
 import { resolveIdentities } from './normalize/identity.js';
 import { isMeaningfulMessage } from './normalize/schema.js';
 
@@ -71,8 +72,31 @@ function loadAllThreads() {
   }
   const contacts = parseVcf(contactsPath);
 
+  // Load any .ics birthday files (e.g., from fb2cal) — optional.
+  const icsDir = path.join(INPUTS, 'birthdays');
+  const icsBirthdays = loadIcsBirthdays(icsDir);
+  if (icsBirthdays.length) {
+    console.log(`Birthdays (ICS): ${icsBirthdays.length} from ${path.relative(ROOT, icsDir)}`);
+  }
+
+  // Dedupe by lowercase name + month + day (vCard wins over ICS for the same person)
+  const seen = new Set();
+  const allBirthdays = [];
+  for (const b of (contacts.birthdays || [])) {
+    const key = `${(b.name || '').toLowerCase()}|${b.month}|${b.day}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    allBirthdays.push({ ...b, source: 'vcard' });
+  }
+  for (const b of icsBirthdays) {
+    const key = `${(b.name || '').toLowerCase()}|${b.month}|${b.day}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    allBirthdays.push({ ...b, source: 'ics' });
+  }
+
   const { identities } = resolveIdentities(allThreads, contacts);
-  return { threads: allThreads, identities };
+  return { threads: allThreads, identities, birthdays: allBirthdays };
 }
 
 function escapeSql(s) {
@@ -89,7 +113,7 @@ async function main() {
   }
 
   console.log('Loading and parsing all sources...');
-  const { threads, identities } = loadAllThreads();
+  const { threads, identities, birthdays } = loadAllThreads();
   console.log(`  ${threads.length} threads, ${identities.length} identities`);
 
   const totalMsgs = threads.reduce((s, t) => s + t.messages.length, 0);
@@ -136,6 +160,18 @@ async function main() {
       canonical_id VARCHAR NOT NULL,
       PRIMARY KEY (thread_id, canonical_id)
     );
+
+    CREATE TABLE birthdays (
+      canonical_id VARCHAR,
+      name         VARCHAR NOT NULL,
+      month        INTEGER NOT NULL,
+      day          INTEGER NOT NULL,
+      year         INTEGER,
+      year_known   BOOLEAN NOT NULL,
+      source       VARCHAR NOT NULL
+    );
+    CREATE INDEX idx_birthdays_canonical ON birthdays(canonical_id);
+    CREATE INDEX idx_birthdays_md ON birthdays(month, day);
   `);
   console.log('Schema created.');
 
@@ -206,6 +242,28 @@ async function main() {
   }
   console.log(`  done — ${links}`);
 
+  // Birthdays (vCard-derived). Best-effort canonical_id resolution by name.
+  console.log('Inserting birthdays...');
+  // Build a name→canonical_id index from identities
+  const nameToCanonical = new Map();
+  for (const id of identities) {
+    if (id.displayName) nameToCanonical.set(id.displayName.toLowerCase(), id.canonicalId);
+    for (const alias of (id.aliases || [])) {
+      if (alias) nameToCanonical.set(String(alias).toLowerCase(), id.canonicalId);
+    }
+  }
+  let bdayCount = 0, bdayResolved = 0;
+  for (const b of birthdays) {
+    const canId = nameToCanonical.get(b.name.toLowerCase()) || null;
+    if (canId) bdayResolved++;
+    await conn.run(`
+      INSERT INTO birthdays (canonical_id, name, month, day, year, year_known, source)
+      VALUES (${escapeSql(canId)}, ${escapeSql(b.name)}, ${b.month}, ${b.day}, ${b.year ?? 'NULL'}, ${b.year_known}, ${escapeSql(b.source || 'vcard')})
+    `);
+    bdayCount++;
+  }
+  console.log(`  done — ${bdayCount} birthdays, ${bdayResolved} resolved to a canonical identity`);
+
   // Quick stats
   const showStat = async (label, sql) => {
     const reader = await conn.runAndReadAll(sql);
@@ -221,6 +279,8 @@ async function main() {
   await showStat('threads (1-on-1)', 'SELECT COUNT(*) FROM threads WHERE NOT is_group');
   await showStat('threads (group)', 'SELECT COUNT(*) FROM threads WHERE is_group');
   await showStat('identities', 'SELECT COUNT(*) FROM identities');
+  await showStat('birthdays', 'SELECT COUNT(*) FROM birthdays');
+  await showStat('birthdays w/ canonical', 'SELECT COUNT(*) FROM birthdays WHERE canonical_id IS NOT NULL');
 
   await conn.disconnectSync();
 

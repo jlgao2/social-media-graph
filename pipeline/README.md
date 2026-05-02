@@ -55,11 +55,26 @@ For bulk export, [whatsapp-chat-parser](https://github.com/Pustur/whatsapp-chat-
 
 Request at [facebook.com/dyi](https://www.facebook.com/dyi). Choose **JSON** + **Messages only**. Drops into `./inputs/messenger/`.
 
-### Contacts (for name mapping)
+### Contacts (for name mapping + birthdays)
 
 Open Contacts.app → File → Export → Export vCard → save to `./inputs/contacts.vcf`.
 
-This lets the pipeline turn raw phone numbers (e.g., `+15551234567`) into the names from your contacts everywhere downstream.
+This lets the pipeline turn raw phone numbers (e.g., `+15551234567`) into the names from your contacts everywhere downstream. The vCard's `BDAY:` field (when present) populates the `birthdays` table.
+
+### Birthdays from Facebook (optional)
+
+Facebook removes the birthday API/feed from time to time, so we don't ship a Facebook-scraping integration. Instead, run [fb2cal](https://github.com/mobeigi/fb2cal) yourself (it handles your FB credentials in their tool, not ours), then drop the resulting `.ics` file into `./inputs/birthdays/`. The pipeline will ingest any `*.ics` files there alongside vCard birthdays:
+
+```bash
+# Once: install fb2cal per their README (Python, requires your FB login)
+pipx install fb2cal  # or follow their setup
+
+# Each refresh:
+fb2cal --output ./inputs/birthdays/facebook.ics
+npm run build-db
+```
+
+ICS-derived birthdays don't have year information (FB doesn't expose real birth year). vCard birthdays take precedence when the same name exists in both sources.
 
 ---
 

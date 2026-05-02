@@ -132,6 +132,29 @@ Standalone CLI: `npm run portrait` — uses cached identity resolution and ranki
 - Real-time portrait updates as new messages arrive (regeneration is manual)
 - Group threads (1-on-1 only; group dynamics need a different methodology)
 
+## Extensibility for future features
+
+The anchor moment schema is designed to be forward-compatible with photo and location data without a v1 rewrite:
+
+```json
+{
+  "date": "YYYY-MM-DD",
+  "context": "...",
+  "messages": [{ "id": "...", "ts": ..., "from": "me|them", "body": "..." }],
+  "attachments": [{ "type": "photo|video|audio", "path": "...", "caption": "..." }],
+  "location": { "lat": ..., "lng": ..., "place": "..." }
+}
+```
+
+v1 ignores `attachments` and `location`. The chunker already passes full message objects through, so attachment metadata is preserved end-to-end and available to future versions.
+
+Future v2/v3 work (own specs):
+- **Photo selection + inline rendering in portraits** (vision model calls, cost-controlled)
+- **Apple Photos library ingestion** (GPS metadata, face groupings)
+- **Location ingestion** (Apple Significant Locations, Google Timeline, calendar)
+- **Place-anchored memory** in L2 ("you've been to Snowbird three times…")
+- **Biometric × location correlation** in L4
+
 ## Open questions for implementation plan
 
 - Exact chunk size if a 3-month window is too sparse (some relationships have <50 messages/quarter) or too dense (EJ has thousands per month)
